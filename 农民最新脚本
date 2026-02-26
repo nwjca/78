@@ -1,0 +1,615 @@
+-- ========== WindUI 加载 ==========
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+WindUI.TransparencyValue = 0.2
+WindUI:SetTheme("Dark")
+
+-- ========== 创建主窗口（标题：农民剧本）=========
+local Window = WindUI:CreateWindow({
+    Title = "农民剧本",
+    Icon = "palette",
+    Author = "上面大名称下面",
+    Folder = "农民剧本配置",
+    Size = UDim2.fromOffset(700, 500),
+    Theme = "Dark",
+    User = {
+        Enabled = true,
+        Callback = function()
+            WindUI:Notify({Title = "配置触发", Content = "用户配置回调已执行", Duration = 1.5})
+        end
+    },
+    SideBarWidth = 220,
+    ScrollBarEnabled = true
+})
+
+Window:Tag({
+    Title = "1.0",
+    Color = Color3.fromHex("#306aff")
+})
+
+-- ========== 通用功能标签页（精简版 + 移速/跳跃）=========
+local TabGeneral = Window:Tab({
+    Title = "通用功能",
+    Icon = "bird",
+    Locked = false,
+})
+
+-- 分区1：比例调整
+local SectionScale = TabGeneral:Section({ 
+    Title = "比例调整",
+    TextXAlignment = "Left",
+    TextSize = 17
+})
+
+-- 普京比例按钮
+SectionScale:Button({
+    Title = "普京比例",
+    Callback = function()
+        getgenv().Resolution = { [".gg/scripters"] = 0.65 }
+        local Camera = workspace.CurrentCamera
+        if getgenv().gg_scripters == nil then
+            game:GetService("RunService").RenderStepped:Connect(function()
+                Camera.CFrame = Camera.CFrame * CFrame.new(0,0,0, 1,0,0,0, getgenv().Resolution[".gg/scripters"],0,0,0,1)
+            end)
+        end
+        getgenv().gg_scripters = "g5s"
+    end
+})
+
+-- 恢复比例按钮
+SectionScale:Button({
+    Title = "恢复比例",
+    Callback = function()
+        getgenv().Resolution = { [".gg/scripters"] = 1 }
+        local Camera = workspace.CurrentCamera
+        if getgenv().gg_scripters == nil then
+            game:GetService("RunService").RenderStepped:Connect(function()
+                Camera.CFrame = Camera.CFrame * CFrame.new(0,0,0, 1,0,0,0, getgenv().Resolution[".gg/scripters"],0,0,0,1)
+            end)
+        end
+        getgenv().gg_scripters = "g5s"
+    end
+})
+
+-- 分区2：移动属性
+local SectionMovement = TabGeneral:Section({ 
+    Title = "移动属性",
+    TextXAlignment = "Left",
+    TextSize = 17
+})
+
+-- 玩家移速相关变量
+local speedEnabled = false
+local speedValue = 16  -- 默认游戏速度
+local jumpEnabled = false
+local jumpValue = 50    -- 默认跳跃高度
+
+-- 锁定循环连接
+local speedLoop = nil
+local jumpLoop = nil
+
+-- 获取当前玩家Humanoid的函数
+local function getHumanoid()
+    local char = game.Players.LocalPlayer.Character
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+-- 启动速度锁定循环
+local function startSpeedLoop()
+    if speedLoop then speedLoop:Disconnect() end
+    speedLoop = game:GetService("RunService").RenderStepped:Connect(function()
+        if not speedEnabled then return end
+        local hum = getHumanoid()
+        if hum then
+            hum.WalkSpeed = speedValue
+        end
+    end)
+end
+
+-- 启动跳跃锁定循环
+local function startJumpLoop()
+    if jumpLoop then jumpLoop:Disconnect() end
+    jumpLoop = game:GetService("RunService").RenderStepped:Connect(function()
+        if not jumpEnabled then return end
+        local hum = getHumanoid()
+        if hum then
+            hum.JumpPower = jumpValue
+        end
+    end)
+end
+
+-- 移速滑块
+SectionMovement:Slider({
+    Title = "玩家移速",
+    Step = 0.5,
+    Value = { Min = 0, Max = 100, Default = speedValue },
+    Callback = function(value)
+        speedValue = value
+    end
+})
+
+-- 移速锁定开关
+SectionMovement:Toggle({
+    Title = "锁定移速",
+    Desc = "开启后持续应用设定的移速值",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        speedEnabled = state
+        if state then
+            startSpeedLoop()
+        else
+            if speedLoop then
+                speedLoop:Disconnect()
+                speedLoop = nil
+            end
+        end
+    end
+})
+
+-- 跳跃高度滑块
+SectionMovement:Slider({
+    Title = "跳跃高度",
+    Step = 1,
+    Value = { Min = 0, Max = 200, Default = jumpValue },
+    Callback = function(value)
+        jumpValue = value
+    end
+})
+
+-- 跳跃锁定开关
+SectionMovement:Toggle({
+    Title = "锁定跳跃",
+    Desc = "开启后持续应用设定的跳跃高度",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        jumpEnabled = state
+        if state then
+            startJumpLoop()
+        else
+            if jumpLoop then
+                jumpLoop:Disconnect()
+                jumpLoop = nil
+            end
+        end
+    end
+})
+
+-- 恢复默认按钮
+SectionMovement:Button({
+    Title = "恢复默认",
+    Callback = function()
+        speedValue = 16
+        jumpValue = 50
+        WindUI:Notify({ Title = "移动属性", Content = "已恢复默认值", Duration = 1.5 })
+    end
+})
+
+-- ========== Crim 脚本加载器标签页 ==========
+local TabCrim = Window:Tab({
+    Title = "Crim",
+    Icon = "code",
+    Locked = false,
+})
+
+local SectionCrim = TabCrim:Section({
+    Title = "脚本加载器",
+    TextXAlignment = "Left",
+    TextSize = 17
+})
+
+SectionCrim:Button({
+    Title = "执行 Crim 脚本",
+    Desc = "点击运行外部脚本（请确保URL有效）",
+    Callback = function()
+        local success, err = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/nwjca/crim/refs/heads/main/crim"))()
+        end)
+        if success then
+            WindUI:Notify({
+                Title = "Crim 脚本",
+                Content = "脚本已成功执行",
+                Icon = "check",
+                Duration = 2
+            })
+        else
+            WindUI:Notify({
+                Title = "执行失败",
+                Content = "错误: " .. tostring(err):sub(1, 50),
+                Icon = "x",
+                Duration = 3
+            })
+            warn("Crim 脚本执行错误:", err)
+        end
+    end
+})
+
+-- ========== ESP 标签页（MC风格）=========
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+local TabESP = Window:Tab({
+    Title = "ESP",
+    Icon = "eye",
+    Locked = false,
+})
+
+local SectionESP = TabESP:Section({
+    Title = "透视设置",
+    TextXAlignment = "Left",
+    TextSize = 17
+})
+
+-- ESP 启用开关
+local espEnabled = false
+SectionESP:Toggle({
+    Title = "启用 ESP",
+    Desc = "显示玩家2D框、名称、距离和血量",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        espEnabled = state
+    end
+})
+
+-- 字体选择：Minecraft 像素风格
+local espFont = Enum.Font.Minecraft
+
+-- 存储每个玩家的绘制对象
+local espDrawings = {}
+
+-- 创建单个玩家的 ESP 元素
+local function createESP(player)
+    if player == LocalPlayer then return end
+    if espDrawings[player] then return end
+
+    local sg = Instance.new("ScreenGui")
+    sg.Name = player.Name .. "_ESP"
+    sg.IgnoreGuiInset = true
+    sg.Parent = CoreGui
+
+    -- 名称标签（框上方）
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.new(1, 1, 1)
+    nameLabel.Font = espFont
+    nameLabel.TextSize = 14
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Text = player.Name
+    nameLabel.Size = UDim2.new(0, 100, 0, 16)
+    nameLabel.Parent = sg
+
+    -- 距离标签（框下方）
+    local distLabel = Instance.new("TextLabel")
+    distLabel.BackgroundTransparency = 1
+    distLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+    distLabel.Font = espFont
+    distLabel.TextSize = 12
+    distLabel.TextStrokeTransparency = 0.5
+    distLabel.Size = UDim2.new(0, 60, 0, 14)
+    distLabel.Parent = sg
+
+    -- 血量条背景（黑色边框）
+    local healthBg = Instance.new("Frame")
+    healthBg.BackgroundColor3 = Color3.new(0, 0, 0)
+    healthBg.BorderSizePixel = 1
+    healthBg.BorderColor3 = Color3.new(1, 1, 1)
+    healthBg.Size = UDim2.new(0, 4, 0, 40)
+    healthBg.Parent = sg
+
+    -- 血量填充条
+    local healthFill = Instance.new("Frame")
+    healthFill.BackgroundColor3 = Color3.new(0, 1, 0)
+    healthFill.BorderSizePixel = 0
+    healthFill.Size = UDim2.new(1, 0, 1, 0)
+    healthFill.Parent = healthBg
+
+    -- 血量颜色渐变（红→黄→绿）
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(1, 0, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 0)),
+        ColorSequenceKeypoint.new(1, Color3.new(0, 1, 0))
+    })
+    gradient.Rotation = 90
+    gradient.Parent = healthFill
+
+    -- 2D框
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Thickness = 1
+    box.Filled = false
+    box.Color = Color3.new(1, 1, 1)
+    box.Transparency = 1
+
+    espDrawings[player] = {
+        box = box,
+        gui = sg,
+        nameLabel = nameLabel,
+        distLabel = distLabel,
+        healthBg = healthBg,
+        healthFill = healthFill
+    }
+
+    -- 玩家离开时清理
+    player.AncestryChanged:Connect(function()
+        if not player:IsDescendantOf(Players) then
+            if espDrawings[player] then
+                espDrawings[player].box:Remove()
+                espDrawings[player].gui:Destroy()
+                espDrawings[player] = nil
+            end
+        end
+    end)
+end
+
+-- 更新所有玩家 ESP 位置和可见性
+local function updateESP()
+    if not espEnabled then
+        for player, data in pairs(espDrawings) do
+            data.box.Visible = false
+            data.gui.Enabled = false
+        end
+        return
+    end
+
+    for player, data in pairs(espDrawings) do
+        local char = player.Character
+        local head = char and char:FindFirstChild("Head")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        if head and hum and hum.Health > 0 then
+            local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+            if onScreen then
+                local dist = (Camera.CFrame.Position - head.Position).Magnitude
+                local boxWidth = 2000 / dist
+                local boxHeight = 3500 / dist
+                local topY = pos.Y - boxHeight / 2
+                local bottomY = pos.Y + boxHeight / 2
+                local leftX = pos.X - boxWidth / 2
+
+                -- 更新 2D 框
+                data.box.Visible = true
+                data.box.Position = Vector2.new(leftX, topY)
+                data.box.Size = Vector2.new(boxWidth, boxHeight)
+
+                -- 更新 GUI 位置
+                data.gui.Enabled = true
+                data.nameLabel.Position = UDim2.new(0, pos.X - data.nameLabel.AbsoluteSize.X / 2, 0, topY - 20)
+                data.distLabel.Text = math.floor(dist) .. " studs"
+                data.distLabel.Position = UDim2.new(0, pos.X - data.distLabel.AbsoluteSize.X / 2, 0, bottomY + 4)
+                data.healthBg.Position = UDim2.new(0, leftX - 8, 0, topY)
+
+                local healthPercent = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                data.healthFill.Size = UDim2.new(1, 0, healthPercent, 0)
+                data.healthFill.Position = UDim2.new(0, 0, 1 - healthPercent, 0)
+            else
+                data.box.Visible = false
+                data.gui.Enabled = false
+            end
+        else
+            data.box.Visible = false
+            data.gui.Enabled = false
+        end
+    end
+end
+
+-- 处理玩家加入
+local function onPlayerAdded(player)
+    if player ~= LocalPlayer then
+        local function onCharacterAdded(char)
+            task.wait(0.5)
+            createESP(player)
+        end
+        if player.Character then
+            onCharacterAdded(player.Character)
+        end
+        player.CharacterAdded:Connect(onCharacterAdded)
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayerAdded(player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+-- 每帧更新
+RunService.RenderStepped:Connect(updateESP)
+
+-- ========== Aimbot 标签页（兼容PE和手机）=========
+local UserInputService = game:GetService("UserInputService")
+local Mouse = LocalPlayer:GetMouse()
+
+-- Aimbot 配置变量
+local aimbotEnabled = false
+local fovRadius = 80           -- 默认FOV半径
+local aimbotPrediction = 112    -- 默认预测
+local aimbotSmoothness = 0.6    -- 默认滑度
+local aimbotTargetPart = "头部"  -- 默认部位
+
+-- 创建 FOV 圆圈（使用Drawing，兼容PC和移动端）
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible = false
+fovCircle.Thickness = 2
+fovCircle.NumSides = 60
+fovCircle.Radius = fovRadius
+fovCircle.Color = Color3.fromRGB(255, 255, 255)
+fovCircle.Filled = false
+fovCircle.Transparency = 1
+fovCircle.Position = Vector2.new(0, 0)
+
+-- 获取目标部位的位置
+local function getTargetPosition(player)
+    if not player.Character then return nil end
+    local part
+    if aimbotTargetPart == "头部" then
+        part = player.Character:FindFirstChild("Head")
+    elseif aimbotTargetPart == "胸部" then
+        part = player.Character:FindFirstChild("Torso") or player.Character:FindFirstChild("UpperTorso")
+    elseif aimbotTargetPart == "左臂" then
+        part = player.Character:FindFirstChild("Left Arm") or player.Character:FindFirstChild("LeftHand")
+    end
+    return part and part.Position
+end
+
+-- 获取FOV内的最近玩家
+local function getClosestPlayerInFOV()
+    local center = Vector2.new(Mouse.X, Mouse.Y)
+    local closest = nil
+    local shortestDistance = fovRadius + 1
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local pos = getTargetPosition(player)
+            if pos then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(pos)
+                if onScreen then
+                    local screenPoint = Vector2.new(screenPos.X, screenPos.Y)
+                    local dist = (screenPoint - center).Magnitude
+                    if dist < shortestDistance then
+                        shortestDistance = dist
+                        closest = player
+                    end
+                end
+            end
+        end
+    end
+    return closest, shortestDistance
+end
+
+-- 平滑移动鼠标
+local function moveMouseSmoothly(targetPos)
+    local currentPos = Vector2.new(Mouse.X, Mouse.Y)
+    local delta = targetPos - currentPos
+    local moveDelta = delta * (1 - aimbotSmoothness)
+    mousemoverel(moveDelta.X, moveDelta.Y)
+end
+
+-- 主瞄准循环
+local aimConnection
+local function startAimbot()
+    if aimConnection then aimConnection:Disconnect() end
+    aimConnection = RunService.RenderStepped:Connect(function()
+        -- 更新FOV圆圈位置和可见性
+        fovCircle.Visible = aimbotEnabled
+        if aimbotEnabled then
+            fovCircle.Position = Vector2.new(Mouse.X, Mouse.Y)
+            fovCircle.Radius = fovRadius
+
+            -- 寻找目标
+            local target, distance = getClosestPlayerInFOV()
+            if target and distance <= fovRadius then
+                local targetPos = getTargetPosition(target)
+                if targetPos then
+                    -- 应用预测（基于目标速度）
+                    if aimbotPrediction > 0 then
+                        local targetVelocity = target.Character.HumanoidRootPart and target.Character.HumanoidRootPart.Velocity or Vector3.zero
+                        targetPos = targetPos + targetVelocity * (aimbotPrediction / 100) -- 预测值除以100调整为合理范围
+                    end
+
+                    local screenTarget, onScreen = Camera:WorldToViewportPoint(targetPos)
+                    if onScreen then
+                        moveMouseSmoothly(Vector2.new(screenTarget.X, screenTarget.Y))
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- 创建Aimbot标签页
+local TabAimbot = Window:Tab({
+    Title = "Aimbot",
+    Icon = "crosshair",
+    Locked = false,
+})
+
+local SectionAimbot = TabAimbot:Section({
+    Title = "瞄准设置",
+    TextXAlignment = "Left",
+    TextSize = 17
+})
+
+-- Aimbot开关
+SectionAimbot:Toggle({
+    Title = "启用 Aimbot",
+    Desc = "开启FOV圆圈和自动瞄准",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        aimbotEnabled = state
+        fovCircle.Visible = state
+        if state then
+            startAimbot()
+        else
+            if aimConnection then aimConnection:Disconnect() end
+        end
+        WindUI:Notify({
+            Title = "Aimbot",
+            Content = state and "已启用" or "已禁用",
+            Icon = state and "check" or "x",
+            Duration = 1.5
+        })
+    end
+})
+
+-- FOV大小滑块
+SectionAimbot:Slider({
+    Title = "FOV 半径",
+    Step = 1,
+    Value = { Min = 10, Max = 300, Default = fovRadius },
+    Callback = function(value)
+        fovRadius = value
+        fovCircle.Radius = value
+    end
+})
+
+-- 目标部位下拉
+SectionAimbot:Dropdown({
+    Title = "瞄准部位",
+    Values = { "头部", "胸部", "左臂" },
+    Value = aimbotTargetPart,
+    Callback = function(value)
+        aimbotTargetPart = value
+    end
+})
+
+-- 预测滑块
+SectionAimbot:Slider({
+    Title = "预测",
+    Step = 1,
+    Value = { Min = 0, Max = 200, Default = aimbotPrediction },
+    Callback = function(value)
+        aimbotPrediction = value
+    end
+})
+
+-- 滑度滑块
+SectionAimbot:Slider({
+    Title = "滑度",
+    Step = 0.01,
+    Value = { Min = 0, Max = 1, Default = aimbotSmoothness },
+    Callback = function(value)
+        aimbotSmoothness = value
+    end
+})
+
+-- 可选：FOV圆圈颜色选择器
+SectionAimbot:ColorPicker({
+    Title = "圆圈颜色",
+    Default = fovCircle.Color,
+    Callback = function(color)
+        fovCircle.Color = color
+    end
+})
+
+-- 启动时隐藏圆圈（等待开关开启）
+fovCircle.Visible = false
+
+-- 脚本结束提示
+WindUI:Notify({ Title = "农民剧本", Content = "所有功能加载完成", Duration = 2 })
